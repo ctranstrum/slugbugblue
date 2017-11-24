@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html class="no-js">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>SlugBugBlue</title>
+  <link rel="stylesheet" href="sbb.css">
+</head>
+<body>
+  <section id="intro" class="active">
+    <h1>SlugBugBlue</h1>
+    <div class="centered content">
+      <img src="mre/slug01.jpg" width="500" height="379" class="hidden whimsical">
+      <img src="mre/slug02.png" width="418" height="294" class="hidden">
+      <img src="mre/slug03.png" width="364" height="204" class="hidden">
+      <img src="mre/slug04.jpg" width="500" height="375" class="hidden whimsical">
+      <img src="mre/slug05.jpg" width="500" height="375" class="hidden whimsical">
+      <h2>Gotta love it.</h2>
+    </div>
+    <noscript>
+      <div class="nojs warning">You must enable JavaScript for this site.</div>
+    </noscript>
+    <div class="oldbrowser warning">
+      You are using an older browser. Upgrade to one of these browsers today.
+      <a href="http://ie8optimized.com/">Microsoft Internet Explorer</a>
+      <a href="http://google.com/chrome">Google Chrome</a>
+      <a href="http://getfirefox.com/">Mozilla Firefox</a>
+      <a href="http://apple.com/safari">Apple Safari</a>
+      <a href="http://opera.com/">Opera</a>
+      Go directly to a browser upgrade. Do not pass Go. Do not collect $200.
+    </div>
+  </section>
+  <script src="modernizr.js"> </script>
+  <script src="jquery-3.2.1.slim.min.js"> </script>
+  <script>
+    $(function() {
+      var $img = $('img.hidden');
+      var count = $img.length;
+      var item = Math.floor(Math.random() * count);
+      $img.eq(item).show();
+    });
+  </script>
+</body>
+</html>

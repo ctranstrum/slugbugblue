@@ -1,0 +1,89 @@
+body {
+  font: normal 12pt serif;
+  margin: 0px;
+}
+
+h1 {
+  background-color: #000;
+  color: #fff;
+  font: normal 10pt sans-serif;
+  margin: 0px;
+  padding: 3px;
+  text-align: center;
+}
+
+h2 {
+  font: normal 12pt sans-serif;
+}
+
+section {
+  display: none;
+}
+
+section.active {
+  display: block;
+}
+
+section div.content {
+  margin: 10px;
+}
+
+.note {
+  border: 1px solid #3ed;
+  border-radius: 8px;
+  color: #273;
+  font: normal 10pt sans-serif;
+  margin: 10px;
+  padding: 10px;
+  text-align: center;
+}
+
+.warning {
+  background-color: #de6;
+  border: 1px dashed #d00;
+  color: #d00;
+  padding: 10px;
+  text-align: center;
+}
+
+.hidden {
+  display: none;
+}
+
+img.whimsical {
+  border-radius: 15px;
+  border: 1px solid rgba(255,255,255,1);
+}
+
+.centered {
+  text-align: center;
+}
+
+/* Classes to display dorky stuff only to dorky browsers */
+
+html.js .nojs {
+  display: none;
+}
+
+html .oldbrowser {
+  display: none;
+}
+
+html.no-localstorage .oldbrowser {
+  display: block;
+}
+
+html.no-canvas .oldbrowser {
+  display: block;
+}
+
+.oldbrowser a {
+    display: block;
+}
+
+
+/* Debug. Remove for production. */
+
+canvas {
+  border: 1px solid black;
+}
