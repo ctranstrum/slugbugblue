@@ -1,6 +1,8 @@
-# Compiled files
-*.tfstate
-*.tfstate.backup
+# Secrets
+secrets.js
 
-# Module directory
-.terraform/
+# Terraform
+backend.tf
+terraform.tfvars
+*.tfstate*
+.terraform
