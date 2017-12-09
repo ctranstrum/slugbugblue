@@ -22,7 +22,7 @@ function contentType (r) {
 
 test('Domain name', t => {
   t.plan(1);
-  dns.lookup(secrets.hostname, (err, addresses, family) => {
+  dns.lookup(secrets.hostname, err => {
     t.notOk(err, 'DNS lookup');
     if (err) {
       test_website({skip:true});
@@ -39,7 +39,6 @@ function test_website (dnsok) {
     head('', r => {
       t.equals(200, r.statusCode, '200 OK');
       t.equals(contentType(r), 'text/html', 'Content-Type: text/html');
-      r.resume();
     });
   });
 
@@ -48,19 +47,15 @@ function test_website (dnsok) {
     t.timeoutAfter(9999);
     head('favicon.ico', r => {
       t.equals(contentType(r), 'image/x-icon', '.ico');
-      r.resume();
     });
     head('modernizr.js', r => {
       t.equals(contentType(r), 'application/javascript', '.js');
-      r.resume();
     });
     head('mre/slug01.jpg', r => {
       t.equals(contentType(r), 'image/jpeg', '.jpg');
-      r.resume();
     });
     head('mre/slug03.png', r => {
       t.equals(contentType(r), 'image/png', '.png');
-      r.resume();
     });
   });
 }
