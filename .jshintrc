@@ -1,5 +1,15 @@
 {
+  "browser": true,
+  "browserify": true,
   "esversion": 6,
+  "futurehostile": true,
+  "noarg": true,
+  "nocomma": true,
   "node": true,
-  "strict": "global"
+  "nonbsp": true,
+  "singleGroups": true,
+  "strict": "global",
+  "undef": true,
+  "unused": true,
+  "varstmt": true
 }
