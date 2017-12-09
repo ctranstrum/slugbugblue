@@ -16,3 +16,7 @@ variable "www" {
   description = "Usually www, but hey, it's your life"
   default     = "www"
 }
+
+variable "zone_id" {
+  description = "Route53 Zone ID, calculated automagically"
+}

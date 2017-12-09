@@ -136,8 +136,8 @@ data "aws_acm_certificate" "www" {
 ### Set up CNAME records ###
 resource "aws_route53_record" "www" {
   count   = "${length(local.aliases)}"
-  zone_id = "${data.aws_route53_zone.domain.zone_id}"
-  name    = "${element(local.aliases, count.index)}"
+  zone_id = "${var.zone_id}"
+  name    = "${local.aliases[count.index]}"
   type    = "A"
 
   alias {
@@ -145,8 +145,4 @@ resource "aws_route53_record" "www" {
     zone_id                = "${aws_cloudfront_distribution.www.hosted_zone_id}"
     evaluate_target_health = false
   }
-}
-
-data "aws_route53_zone" "domain" {
-  name = "${var.domain}"
 }
