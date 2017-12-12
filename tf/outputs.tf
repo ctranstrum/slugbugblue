@@ -8,6 +8,11 @@ output "cloudfront_name" {
   value       = "${module.www.cloudfront_name}"
 }
 
+output "database_name" {
+  description = "The name of the DynamoDB database"
+  value       = "${module.db.name}"
+}
+
 output "domain_names" {
   description = "The domain names you can use to access the website"
   value       = ["${module.www.domain_names}"]

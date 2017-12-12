@@ -2,6 +2,12 @@ provider "aws" {
   region = "us-east-1"
 }
 
+locals {
+  tags {
+    env = "${var.env}"
+  }
+}
+
 ####################################
 ### Create the s3 static website ###
 module "www" {
@@ -11,10 +17,18 @@ module "www" {
   www                 = "${var.www}"
   create_apex_website = "${var.create_apex_website}"
   zone_id             = "${local.zone_id}"
+  tags                = "${local.tags}"
+}
 
-  tags {
-    env = "${var.env}"
-  }
+###############################
+### We need a database, too ###
+module "db" {
+  source = "./modules/db"
+
+  env          = "${var.env}"
+  capacity     = "${var.db_capacity}"
+  max_capacity = "${var.db_max_capacity}"
+  tags         = "${local.tags}"
 }
 
 ###########################

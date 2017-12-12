@@ -3,6 +3,16 @@ variable "create_apex_website" {
   default     = false
 }
 
+variable "db_capacity" {
+  description = "The minimum read/write capacity of the database"
+  default     = 5
+}
+
+variable "db_max_capacity" {
+  description = "The maximum read/write database autoscale capacity"
+  default     = 20
+}
+
 variable "domain" {
   description = "Your domain name"
   default     = "example.com"
