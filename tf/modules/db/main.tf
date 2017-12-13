@@ -22,7 +22,7 @@ resource "aws_dynamodb_table" "db" {
   }
 
   lifecycle {
-    ignore_changes = ["read-capacity", "write-capacity"]
+    ignore_changes = ["read_capacity", "write_capacity"]
   }
 }
 
