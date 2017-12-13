@@ -1,0 +1,29 @@
+{
+  "name": "slugbugblue",
+  "version": "0.1.0",
+  "description": "Slugbugblue",
+  "main": "index.js",
+  "scripts": {
+    "test": "none"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ctranstrum/slugbugblue.git"
+  },
+  "keywords": [
+    "trax",
+    "turn-based",
+    "games",
+    "terraform",
+    "aws"
+  ],
+  "author": "Chad Transtrum",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/ctranstrum/slugbugblue/issues"
+  },
+  "homepage": "https://github.com/ctranstrum/slugbugblue#readme",
+  "dependencies": {
+    "aws-sdk": "^2.143.0"
+  }
+}
