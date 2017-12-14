@@ -6,3 +6,6 @@ backend.tf
 terraform.tfvars
 *.tfstate*
 .terraform
+
+# node / npm
+node_modules
