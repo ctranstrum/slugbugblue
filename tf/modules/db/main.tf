@@ -1,18 +1,12 @@
 resource "aws_dynamodb_table" "db" {
-  name           = "${var.env}-db"
+  name           = "${var.env}-sbb"
   read_capacity  = "${var.capacity}"
   write_capacity = "${var.capacity}"
   hash_key       = "PKey"
-  range_key      = "SKey"
   tags           = "${var.tags}"
 
   attribute {
     name = "PKey"
-    type = "S"
-  }
-
-  attribute {
-    name = "SKey"
     type = "S"
   }
 
