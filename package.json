@@ -4,7 +4,8 @@
   "description": "Slugbugblue",
   "main": "index.js",
   "scripts": {
-    "test": "none"
+    "pretest": "eslint api/**/*.js && eslint tf/**.*.js",
+    "test": "tape **/test/*.js | faucet"
   },
   "repository": {
     "type": "git",
@@ -24,6 +25,11 @@
   },
   "homepage": "https://github.com/ctranstrum/slugbugblue#readme",
   "dependencies": {
-    "aws-sdk": "^2.143.0"
+    "aws-sdk": "^2.143.0",
+    "zxcvbn": "^4.4.2"
+  },
+  "devDependencies": {
+    "faucet": "0.0.1",
+    "tape": "^4.9.0"
   }
 }

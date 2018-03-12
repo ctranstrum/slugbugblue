@@ -3,6 +3,8 @@
   "browserify": true,
   "esversion": 6,
   "futurehostile": true,
+  "lastsemic": true,
+  "laxbreak": true,
   "noarg": true,
   "nocomma": true,
   "node": true,

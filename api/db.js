@@ -3,9 +3,25 @@
 const AWS = require('aws-sdk');
 const dynamodb = new AWS.DynamoDB();
 
+// This feels really dumb, because we can compile these on the fly.
+// But literal regexes are compiled just once, and it seems a waste
+// to compile these thousands of times.
+// ttl_regex: regular expressions to help with the ttlify function
+const ttl_regex = {
+  s: /(\d+)s/,
+  m: /(\d+)m/,
+  h: /(\d+)h/,
+  d: /(\d+)d/,
+  M: /(\d+)M/,
+  y: /(\d+)y/
+};
+
+// table: the dynamodb table that we are using as a database
 let table = 'unknown';
 
 /* use
+ *
+ * select a database (or in this case, a table to use as a database)
  *
  * parameters:
  *   table string [r] the name of the DynamoDB table to use as the database
@@ -19,6 +35,8 @@ exports.use = (t) => {
 
 /* get
  *
+ * read data from the database
+ *
  * parameters:
  *   options hash [r] includes the following keys
  *     key string [r] the key to your data (expressed as category.uniquekey)
@@ -26,7 +44,7 @@ exports.use = (t) => {
  *
  * returns:
  *   a promise
- *     resolve(record hash)
+ *     resolve(record hash [possibly empty])
  *       key string: the record's unique key
  *       created date: when the record was created
  *       updated date: when the record was last updated
@@ -81,6 +99,8 @@ exports.get = (options) => {
 
 /* put
  *
+ * write to the database
+ *
  * parameters:
  *   options hash [r]:
  *     key string [r] the key to your data, expressed as category.uniquekey
@@ -93,9 +113,14 @@ exports.get = (options) => {
  *         #y#M#d#h#m#s (eg: 7y2s)
  *       for the number of years, months, days, hours, minutes, seconds in
  *       the future to expire the item. Don't use negative values; delete the
- *       item instead.
+ *       item instead. If you are updating an exising item that already has a
+ *       TTL and you want to preserve the previous TTL, set this value to 0.
+ *       (Or actually, anything that doesn't match the pattern above:
+ *        "preserve" or "don't change" or "keep" or "ttl" would work, too.)
+ *       If ttl is not passed, then any existing TTL will be removed if the PUT
+ *       succeeds.
  *  
- * returns
+ * returns:
  *   a promise
  *     resolve(nothing passed back)
  *     reject(error [passed directly from DynamoDB])
@@ -122,10 +147,16 @@ exports.put = (options) => {
       '#updated = :now, ' +
       '#serial = if_not_exists(#serial, :zero) + :one'
   };
-  if (options.ttl) {
+  if (options.ttl === undefined) {
     params.ExpressionAttributeNames['#ttl'] = 'TTL';
-    params.ExpressionAttributeValues[':ttl'] = { N: ttlify(options.ttl) };
-    params.UpdateExpression += ', #ttl = :ttl';
+    params.UpdateExpression += ' REMOVE #ttl';
+  } else {
+    let expiration = ttlify(options.ttl);
+    if (expiration > 0) {
+      params.ExpressionAttributeNames['#ttl'] = 'TTL';
+      params.ExpressionAttributeValues[':ttl'] = { N: expiration.toString() };
+      params.UpdateExpression += ', #ttl = :ttl';
+    }
   }
   if (options.serial !== undefined) {
     if (options.serial === 0) {
@@ -151,6 +182,15 @@ exports.put = (options) => {
  * DynamoDB stores numbers as strings for compatibility. So let's turn them
  * back into numbers with this hacky little function.
  *
+ * parameters:
+ *   s string [r]: a number stored as a string
+ *
+ * returns:
+ *   a number
+ *
+ * error handling:
+ *   if you pass something other than a string, we just give it back to you
+ *   if you pass a string that isn't a number, you'll get NaN
 */
 function dynN (s) {
   return typeof s === 'string' ? +s : s;
@@ -158,29 +198,28 @@ function dynN (s) {
 
 /* ttlify
  *
- * We want to take a string in the format #y#M#d#h#m#s and return a unix timestamp
- * that is equal to now plus the intervals specified
+ * turn a string like "4h3m12s" into a unix timestamp that long from now
  *
+ * parameters:
+ *   s string [r]: format #y#M#d#h#m#s (case matters, because <M>onth and <m>inute)
+ *
+ * returns:
+ *   ttl number: a unix timestamp equal to now plus the interval(s) specified
+ *
+ * error handling:
+ *   if you give something other than a string (or an object without a match method)
+ *   or if the string you pass doesn't have anything in the right format you get 0
+ *   negative numbers are conveniently abs()ed thanks to our regex matches
 */
 function ttlify (s) {
-  let ttl = Math.floor(Date.now() / 1000);
-  let years = s.match(/([0-9]+)y/);
-  let months = s.match(/([0-9]+)M/);
-  let days = s.match(/([0-9]+)d/);
-  let hours = s.match(/([0-9]+)h/);
-  let minutes = s.match(/([0-9]+)m/);
-  let seconds = s.match(/([0-9]+)s/);
-  let units = 1;
-  if (seconds) ttl += seconds[1] * units;
-  units *= 60;
-  if (minutes) ttl += minutes[1] * units;
-  units *= 60;
-  if (hours) ttl += hours[1] * units;
-  units *= 24;
-  if (days) ttl += days[1] * units;
-  units *= 31;
-  if (months) ttl += months[1] * units;
-  units *= 12;
-  if (years) ttl += years[1] * units;
-  return ttl.toString();
+  if (typeof s.match !== 'function') return 0; // nope nope nope nope nope
+  let seconds = 1;
+  let add_time = (unit, previous_in_unit) => {
+    seconds *= previous_in_unit;
+    let num = s.match(ttl_regex[unit]);
+    return num ? num[1] * seconds : 0;
+  };
+  let sum = add_time('s', 1) + add_time('m', 60) + add_time('h', 60)
+          + add_time('d', 24) + add_time('M', 31) + add_time('y', 12);
+  return sum ? sum + Math.floor(Date.now() / 1000) : 0;
 }

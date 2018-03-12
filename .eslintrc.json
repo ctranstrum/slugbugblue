@@ -1,0 +1,33 @@
+{
+  "env": {
+    "browser": true,
+    "commonjs": true,
+    "es6": true,
+    "node": true
+  },
+  "extends": "eslint:recommended",
+  "parserOptions": {
+    "sourceType": "module"
+  },
+  "rules": {
+    "curly": [ "error", "multi-line", "consistent" ],
+    "dot-location": [ "error", "property" ],
+    "dot-notation": [ "warn" ],
+    "eqeqeq": [ "warn", "smart" ],
+    "guard-for-in": [ "warn" ],
+    "no-alert": [ "error" ],
+    "no-caller": [ "error" ],
+    "no-console": [ "warn", { "allow": ["log"] } ],
+    "no-div-regex": [ "warn" ],
+    "no-else-return": [ "error", { "allowElseIf": false } ],
+    "no-eval": [ "error" ],
+    "no-invalid-this": [ "error" ],
+    "no-new": [ "error" ],
+    "no-with": [ "error" ],
+    "indent": [ "warn", 2 , { "MemberExpression": 0 } ],
+    "linebreak-style": [ "error", "unix" ],
+    "quotes": [ "warn", "single" ],
+    "semi": [ "error", "always", { "omitLastInOneLineBlock": true } ],
+    "wrap-iife": [ "error", "inside" ]
+  }
+}

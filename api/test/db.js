@@ -45,11 +45,11 @@ test('store data', t => {
   t.plan(2);
   db.put({key: 'Test', data: data})
   .then(() => { t.pass('saved data in db') })
-  .catch(e => { t.fail(e) })
+  .catch(t.fail)
   .then(() => { return wait(1000) })
   .then(() => { return db.get({key: 'Test'}) })
   .then(r => { serial = r.serial; t.deepEqual(r.data, data, 'data pulled from database matches') })
-  .catch(e => { t.fail(e) });
+  .catch(t.fail);
 });
 
 test('do not overwrite existing record', t => {
@@ -60,7 +60,7 @@ test('do not overwrite existing record', t => {
     if (e.code === 'ConditionalCheckFailedException') {
       t.pass('returns Conditional Check Failed error');
     } else {
-      t.fail(e) 
+      t.fail(e);
     }
   })
   .then(() => { return wait(1000) })
@@ -69,7 +69,7 @@ test('do not overwrite existing record', t => {
     t.deepEqual(r.data, data, 'original data still in database');
     t.equal(r.serial, serial, 'serial number unchanged');
   })
-  .catch(e => { t.fail(e) });
+  .catch(t.fail);
 });
 
 let newdata = { hash: { hash: { hash: { array: [1, 2, 3], bool: false } } } };
@@ -77,16 +77,28 @@ test('overwrite existing record with ttl', t => {
   t.plan(4);
   db.put({key: 'Test', data: newdata, ttl: '5s'})
   .then(() => { t.pass('saved new data in database') })
-  .catch(e => { t.fail(e) })
+  .catch(t.fail)
   .then(() => { return wait(1000) })
   .then(() => { return db.get({key: 'Test'}) })
   .then(r => {
     t.deepEqual(r.data, newdata, 'record updated');
     t.equal(r.serial, serial + 1, 'serial number incremented');
   })
-  .catch(e => { t.fail(e) })
+  .catch(t.fail)
   .then(() => { return wait(6000) })
   .then(() => { return db.get({key: 'Test'}) })
   .then(r => { t.deepEqual(r, {}, 'expired record not returned') })
-  .catch(e => { t.fail(e) });
+  .catch(t.fail);
+});
+
+let ttldata = { bob: ['ate', 'three', 'bananas'] };
+test('overwrite expired record with new record without ttl', t => {
+  t.plan(2);
+  db.put({key: 'Test', data: ttldata})
+  .then(() => { t.pass('saved new data in database') })
+  .catch(t.fail)
+  .then(() => { return wait(1000) })
+  .then(() => { return db.get({key: 'Test'}) })
+  .then(r => { t.deepEqual(r.data, ttldata, 'ttl removed properly') })
+  .catch(t.fail);
 });
