@@ -9,9 +9,9 @@ You must have an existing Route53-managed domain name.
 You must obtain a certificate from Amazon Certificate Manager for the name(s) of the website.
 
 In order to use an S3 backend:
-* You must create an S3 bucket, private, with encryption, for use as the S3 backend.
-* You must create a DynamoDB table with a primary key named LockID to enable the S3 backend.
-  * Your IAM user must be given dynamodb:\* permissions to that table.
+- You must create an S3 bucket, private, with encryption, for use as the S3 backend.
+- You must create a DynamoDB table with a primary key named LockID to enable the S3 backend.
+  - Your IAM user must be given dynamodb:\* permissions to that table.
 
 # Running terraform
 

@@ -1,20 +1,7 @@
 'use strict';
 
 const AWS = require('aws-sdk');
-const dynamodb = new AWS.DynamoDB();
-
-// This feels really dumb, because we can compile these on the fly.
-// But literal regexes are compiled just once, and it seems a waste
-// to compile these thousands of times.
-// ttl_regex: regular expressions to help with the ttlify function
-const ttl_regex = {
-  s: /(\d+)s/,
-  m: /(\d+)m/,
-  h: /(\d+)h/,
-  d: /(\d+)d/,
-  M: /(\d+)M/,
-  y: /(\d+)y/
-};
+const dynamodb = new AWS.DynamoDB({apiVersion: '2012-08-10'});
 
 // table: the dynamodb table that we are using as a database
 let table = 'unknown';
@@ -76,7 +63,7 @@ exports.get = (options) => {
             } else if (item === 'Data') {
               record.data = JSON.parse(data.Item.Data.S);
             } else if (item === 'DataSet') {
-              record.dataset = JSON.parse(data.Item.DataSet.SS);
+              record.dataset = data.Item.DataSet.SS;
             } else if (['Created', 'Updated'].includes(item)) {
               record[item.toLowerCase()] = new Date(data.Item[item].S);
             } else if (item === 'Serial') {
@@ -91,8 +78,7 @@ exports.get = (options) => {
           }
         }
       }
-      if (expired) record = {};
-      resolve(record);
+      resolve(expired ? {} : record);
     });
   });
 };
@@ -104,7 +90,12 @@ exports.get = (options) => {
  * parameters:
  *   options hash [r]:
  *     key string [r] the key to your data, expressed as category.uniquekey
- *     data hash [r] the data to store in the database
+ *     data hash [o] the data to store under this key
+ *     set array?[strings] [o] string(s) to add to this dataset
+ *     unset array?[strings] [o] string(s) to remove from this dataset
+ *       Both set and unset can be either a string or an array of strings.
+ *       Note that while data, set, and unset are all optional, at least one
+ *       of the three should probably be used to make this useful.
  *     serial number [o] include this if you want to write this item only if
  *       the serial number matches what is currently in the database. Use 0
  *       if you want to create a new record but don't want to update an
@@ -130,52 +121,115 @@ exports.put = (options) => {
     TableName: table,
     Key: { PKey: { S: options.key } },
     ExpressionAttributeNames: {
-      '#data': 'Data',
       '#created': 'Created',
       '#updated': 'Updated',
       '#serial': 'Serial'
     },
     ExpressionAttributeValues: {
-      ':data': { S: JSON.stringify(options.data) },
       ':now': { S: new Date().toJSON() },
       ':one': { N: '1' },
       ':zero': { N: '0' }
-    },
-    UpdateExpression: 
-      'SET #data = :data, ' +
-      '#created = if_not_exists(#created, :now), ' +
-      '#updated = :now, ' +
-      '#serial = if_not_exists(#serial, :zero) + :one'
+    }
   };
+  let update = '#created = if_not_exists(#created, :now), ' +
+    '#updated = :now, ' +
+    '#serial = if_not_exists(#serial, :zero) + :one';
+  if (options.data !== undefined) {
+    params.ExpressionAttributeNames['#data'] = 'Data';
+    params.ExpressionAttributeValues[':data'] = { S: JSON.stringify(options.data) };
+    update = 'SET #data = :data, ' + update;
+  } else {
+    update = 'SET ' + update;
+  }
+  if (options.set !== undefined) {
+    params.ExpressionAttributeNames['#dataset'] = 'DataSet';
+    params.ExpressionAttributeValues[':setplus'] = dynSS(options.set);
+    update = 'ADD #dataset :setplus ' + update;
+  }
+  if (options.unset !== undefined) {
+    params.ExpressionAttributeNames['#dataset'] = 'DataSet';
+    params.ExpressionAttributeValues[':setminus'] = dynSS(options.unset);
+    update = 'DELETE #dataset :setminus ' + update;
+  }
   if (options.ttl === undefined) {
     params.ExpressionAttributeNames['#ttl'] = 'TTL';
-    params.UpdateExpression += ' REMOVE #ttl';
+    update += ' REMOVE #ttl';
   } else {
     let expiration = ttlify(options.ttl);
     if (expiration > 0) {
       params.ExpressionAttributeNames['#ttl'] = 'TTL';
       params.ExpressionAttributeValues[':ttl'] = { N: expiration.toString() };
-      params.UpdateExpression += ', #ttl = :ttl';
+      update += ', #ttl = :ttl';
     }
   }
+  params.UpdateExpression = update;
   if (options.serial !== undefined) {
     if (options.serial === 0) {
       params.ConditionExpression = 'attribute_not_exists(PKey)';
     } else {
-      params.ExpressionAttributeValues[':serial'] = { N: options.serial };
+      params.ExpressionAttributeValues[':serial'] = { N: options.serial.toString() };
       params.ConditionExpression = '#serial = :serial';
     }
   }
   return new Promise((resolve, reject) => {
     dynamodb.updateItem(params, err => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve();
+      if (err) reject(err);
+      else resolve();
     });
   });
 };
+
+/* delete
+ *
+ * remove an item from the database
+ *
+ * parameters:
+ *   options hash [r] contains the following
+ *     key string [r]: the key to remove from the database
+ *     serial number [o]: if included, only delete if the serial matches
+ *
+ * returns:
+ *   a promise
+ *     resolve(nothing passed back)
+ *     reject(error [passed directly from DynamoDB]):
+ *
+ * note that calling this against a key that does not exist does not result in
+ * an error, ie, this function merely ensures the key is not in the database
+*/
+exports.delete = (options) => {
+  let params = {
+    TableName: table,
+    Key: { PKey: { S: options.key } }
+  };
+  if (options.serial) {
+    params.ExpressionAttributeNames = {'#serial': 'Serial'};
+    params.ExpressionAttributeValues = {':serial': { N: options.serial.toString() }};
+    params.ConditionExpression = '#serial = :serial';
+  }
+  return new Promise((resolve, reject) => {
+    dynamodb.deleteItem(params, err => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+};
+
+/* Everything after this point is a helper function and not a part of this module's API */
+
+/* dynSS
+ *
+ * We want to turn a string or an array of strings formatted for DynamoDB ingestion
+ *
+ * parameters:
+ *    set - either a string
+ *        - or an array of strings
+ *
+ * returns:
+ *   an object formatted for ingestion into the DynamoDB API
+*/
+function dynSS(set) {
+  return { SS: Array.isArray(set) ? set.map(x => x.toString()) : [set.toString()] };
+}
 
 /* dynN
  *
@@ -195,6 +249,19 @@ exports.put = (options) => {
 function dynN (s) {
   return typeof s === 'string' ? +s : s;
 }
+
+// This feels really dumb, because we can compile these on the fly.
+// But literal regexes are compiled just once, and it seems a waste
+// to compile these thousands of times.
+// ttl_regex: regular expressions to help with the ttlify function
+const ttl_regex = {
+  s: /(\d+)s/,
+  m: /(\d+)m/,
+  h: /(\d+)h/,
+  d: /(\d+)d/,
+  M: /(\d+)M/,
+  y: /(\d+)y/
+};
 
 /* ttlify
  *

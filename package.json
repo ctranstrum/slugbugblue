@@ -4,7 +4,7 @@
   "description": "Slugbugblue",
   "main": "index.js",
   "scripts": {
-    "pretest": "eslint api/**/*.js && eslint tf/**.*.js",
+    "pretest": "eslint api/**/*.js && eslint tf/**/*.js",
     "test": "tape **/test/*.js | faucet"
   },
   "repository": {

@@ -1,3 +1,8 @@
+variable "api" {
+  description = "The prefix for the API of the website"
+  default     = "api"
+}
+
 variable "create_apex_website" {
   description = "Redirect domain.com to www.domain.com"
   default     = false
@@ -21,6 +26,11 @@ variable "domain" {
 variable "env" {
   description = "The environment you are creating"
   default     = "prod"
+}
+
+variable "region" {
+  description = "The AWS region in which to build your AWS resources"
+  default     = "us-east-1"
 }
 
 variable "www" {

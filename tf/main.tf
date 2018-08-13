@@ -1,5 +1,5 @@
 provider "aws" {
-  region = "us-east-1"
+  region = "${var.region}"
 }
 
 locals {
@@ -31,10 +31,24 @@ module "db" {
   tags         = "${local.tags}"
 }
 
+######################
+### Set up the API ###
+module "api" {
+  source = "./modules/api"
+
+  api     = "${var.api}"
+  domain  = "${var.domain}"
+  env     = "${var.env}"
+  region  = "${var.region}"
+  acct_id = "${local.acct_id}"
+  zone_id = "${local.zone_id}"
+  db_arn  = "${module.db.arn}"
+}
+
 ###########################
 ### Automagic variables ###
 locals {
-  // acct_id = "${data.aws_caller_identity.tf.account_id}"
+  acct_id = "${data.aws_caller_identity.tf.account_id}"
   zone_id = "${data.aws_route53_zone.domain.zone_id}"
 }
 
@@ -42,5 +56,4 @@ data "aws_route53_zone" "domain" {
   name = "${var.domain}"
 }
 
-// data "aws_caller_identity" "tf" {}
-
+data "aws_caller_identity" "tf" {}
