@@ -33,6 +33,7 @@ module "db" {
 
 ######################
 ### Set up the API ###
+/*
 module "api" {
   source = "./modules/api"
 
@@ -44,6 +45,7 @@ module "api" {
   zone_id = "${local.zone_id}"
   db_arn  = "${module.db.arn}"
 }
+*/
 
 ###########################
 ### Automagic variables ###

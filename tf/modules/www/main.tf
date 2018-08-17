@@ -88,7 +88,7 @@ resource "aws_cloudfront_distribution" "www" {
 
   default_cache_behavior {
     target_origin_id       = "www"
-    viewer_protocol_policy = "allow-all"
+    viewer_protocol_policy = "redirect-to-https"
     allowed_methods        = ["GET", "HEAD", "OPTIONS"]
     cached_methods         = ["GET", "HEAD", "OPTIONS"]
     min_ttl                = 60
@@ -125,7 +125,7 @@ resource "aws_cloudfront_distribution" "www" {
 }
 
 resource "aws_cloudfront_origin_access_identity" "www" {
-  comment = "CloudFront user"
+  comment = "${local.website}"
 }
 
 data "aws_acm_certificate" "www" {
