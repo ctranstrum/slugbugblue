@@ -25,7 +25,7 @@
   },
   "homepage": "https://github.com/ctranstrum/slugbugblue#readme",
   "dependencies": {
-    "aws-sdk": "^2.291.0",
+    "aws-sdk": "^2.304.0",
     "zxcvbn": "^4.4.2"
   },
   "devDependencies": {
