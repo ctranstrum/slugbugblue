@@ -1,10 +1,10 @@
-'use strict';
+'use strict'
 
-const AWS = require('aws-sdk');
-const dynamodb = new AWS.DynamoDB({apiVersion: '2012-08-10'});
+const AWS = require('aws-sdk')
+const dynamodb = new AWS.DynamoDB({apiVersion: '2012-08-10'})
 
 // table: the dynamodb table that we are using as a database
-let table = 'unknown';
+let table = 'unknown'
 
 /* use
  *
@@ -16,9 +16,9 @@ let table = 'unknown';
  * returns:
  *   null
 */
-exports.use = (t) => {
-  table = t;
-};
+module.exports.use = (t) => {
+  table = t
+}
 
 /* get
  *
@@ -41,47 +41,44 @@ exports.use = (t) => {
  *       dataset array [o] set of strings, if stored with this key
  *     reject(error [passed directly from DynamoDB])
 */
-exports.get = (options) => {
+module.exports.get = (options) => {
   let params = {
     TableName: table,
-    Key: { PKey: { S: options.key } }
-  };
-  if (options.consistent) params.ConsistentRead = true;
+    Key: { PKey: { S: options.key } },
+  }
+  if (options.consistent) params.ConsistentRead = true
   return new Promise((resolve, reject) => {
-    dynamodb.getItem(params, (err, data) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      let record = {};
-      let expired = false;
+    dynamodb.getItem(params).promise()
+    .then(data => {
+      let record = {}
+      let expired = false
       if (data && data.Item) {
         for (let item in data.Item) {
           if (data.Item.hasOwnProperty(item)) {
             if (item === 'PKey') {
-              record.key = data.Item.PKey.S;
+              record.key = data.Item.PKey.S
             } else if (item === 'Data') {
-              record.data = JSON.parse(data.Item.Data.S);
+              record.data = JSON.parse(data.Item.Data.S)
             } else if (item === 'DataSet') {
-              record.dataset = data.Item.DataSet.SS;
+              record.dataset = data.Item.DataSet.SS
             } else if (['Created', 'Updated'].includes(item)) {
-              record[item.toLowerCase()] = new Date(data.Item[item].S);
+              record[item.toLowerCase()] = new Date(data.Item[item].S)
             } else if (item === 'Serial') {
-              record.serial = dynN(data.Item.Serial.N);
+              record.serial = dynN(data.Item.Serial.N)
             } else if (item === 'TTL') {
-              record.ttl = dynN(data.Item.TTL.N);
-              if (record.ttl < Date.now() / 1000) expired = true;
+              record.ttl = dynN(data.Item.TTL.N)
+              if (record.ttl < Date.now() / 1000) expired = true
             } else {
               // Hm. We have a rogue field.
-              console.log('Rogue field: ' + item + ' (' + data.Item[item] + ')');
+              console.log('Rogue field: ' + item + ' (' + data.Item[item] + ')')
             }
           }
         }
       }
-      resolve(expired ? {} : record);
-    });
-  });
-};
+      resolve(expired ? {} : record)
+    }).catch(reject)
+  })
+}
 
 /* put
  *
@@ -116,68 +113,67 @@ exports.get = (options) => {
  *     resolve(nothing passed back)
  *     reject(error [passed directly from DynamoDB])
 */
-exports.put = (options) => {
+module.exports.put = (options) => {
   let params = {
     TableName: table,
     Key: { PKey: { S: options.key } },
     ExpressionAttributeNames: {
       '#created': 'Created',
       '#updated': 'Updated',
-      '#serial': 'Serial'
+      '#serial': 'Serial',
     },
     ExpressionAttributeValues: {
       ':now': { S: new Date().toJSON() },
       ':one': { N: '1' },
-      ':zero': { N: '0' }
+      ':zero': { N: '0' },
     }
-  };
+  }
   let update = '#created = if_not_exists(#created, :now), ' +
     '#updated = :now, ' +
-    '#serial = if_not_exists(#serial, :zero) + :one';
+    '#serial = if_not_exists(#serial, :zero) + :one'
   if (options.data !== undefined) {
-    params.ExpressionAttributeNames['#data'] = 'Data';
-    params.ExpressionAttributeValues[':data'] = { S: JSON.stringify(options.data) };
-    update = 'SET #data = :data, ' + update;
+    params.ExpressionAttributeNames['#data'] = 'Data'
+    params.ExpressionAttributeValues[':data'] = { S: JSON.stringify(options.data) }
+    update = 'SET #data = :data, ' + update
   } else {
-    update = 'SET ' + update;
+    update = 'SET ' + update
   }
   if (options.set !== undefined) {
-    params.ExpressionAttributeNames['#dataset'] = 'DataSet';
-    params.ExpressionAttributeValues[':setplus'] = dynSS(options.set);
-    update = 'ADD #dataset :setplus ' + update;
+    params.ExpressionAttributeNames['#dataset'] = 'DataSet'
+    params.ExpressionAttributeValues[':setplus'] = dynSS(options.set)
+    update = 'ADD #dataset :setplus ' + update
   }
   if (options.unset !== undefined) {
-    params.ExpressionAttributeNames['#dataset'] = 'DataSet';
-    params.ExpressionAttributeValues[':setminus'] = dynSS(options.unset);
-    update = 'DELETE #dataset :setminus ' + update;
+    params.ExpressionAttributeNames['#dataset'] = 'DataSet'
+    params.ExpressionAttributeValues[':setminus'] = dynSS(options.unset)
+    update = 'DELETE #dataset :setminus ' + update
   }
   if (options.ttl === undefined) {
-    params.ExpressionAttributeNames['#ttl'] = 'TTL';
-    update += ' REMOVE #ttl';
+    params.ExpressionAttributeNames['#ttl'] = 'TTL'
+    update += ' REMOVE #ttl'
   } else {
-    let expiration = ttlify(options.ttl);
+    let expiration = ttlify(options.ttl)
     if (expiration > 0) {
-      params.ExpressionAttributeNames['#ttl'] = 'TTL';
-      params.ExpressionAttributeValues[':ttl'] = { N: expiration.toString() };
-      update += ', #ttl = :ttl';
+      params.ExpressionAttributeNames['#ttl'] = 'TTL'
+      params.ExpressionAttributeValues[':ttl'] = { N: expiration.toString() }
+      update += ', #ttl = :ttl'
     }
   }
-  params.UpdateExpression = update;
+  params.UpdateExpression = update
   if (options.serial !== undefined) {
     if (options.serial === 0) {
-      params.ConditionExpression = 'attribute_not_exists(PKey)';
+      params.ConditionExpression = 'attribute_not_exists(PKey)'
     } else {
-      params.ExpressionAttributeValues[':serial'] = { N: options.serial.toString() };
-      params.ConditionExpression = '#serial = :serial';
+      params.ExpressionAttributeValues[':serial'] = { N: options.serial.toString() }
+      params.ConditionExpression = '#serial = :serial'
     }
   }
   return new Promise((resolve, reject) => {
-    dynamodb.updateItem(params, err => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-};
+    dynamodb.updateItem(params).promise()
+    .then(resolve)
+    .catch(reject)
+  })
+}
 
 /* delete
  *
@@ -196,23 +192,22 @@ exports.put = (options) => {
  * note that calling this against a key that does not exist does not result in
  * an error, ie, this function merely ensures the key is not in the database
 */
-exports.delete = (options) => {
+module.exports.delete = (options) => {
   let params = {
     TableName: table,
-    Key: { PKey: { S: options.key } }
-  };
+    Key: { PKey: { S: options.key } },
+  }
   if (options.serial) {
-    params.ExpressionAttributeNames = {'#serial': 'Serial'};
-    params.ExpressionAttributeValues = {':serial': { N: options.serial.toString() }};
-    params.ConditionExpression = '#serial = :serial';
+    params.ExpressionAttributeNames = {'#serial': 'Serial'}
+    params.ExpressionAttributeValues = {':serial': { N: options.serial.toString() }}
+    params.ConditionExpression = '#serial = :serial'
   }
   return new Promise((resolve, reject) => {
-    dynamodb.deleteItem(params, err => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-};
+    dynamodb.deleteItem(params).promise()
+    .then(resolve)
+    .catch(reject)
+  })
+}
 
 /* Everything after this point is a helper function and not a part of this module's API */
 
@@ -228,7 +223,7 @@ exports.delete = (options) => {
  *   an object formatted for ingestion into the DynamoDB API
 */
 function dynSS(set) {
-  return { SS: Array.isArray(set) ? set.map(x => x.toString()) : [set.toString()] };
+  return { SS: Array.isArray(set) ? set.map(x => x.toString()) : [set.toString()] }
 }
 
 /* dynN
@@ -247,7 +242,7 @@ function dynSS(set) {
  *   if you pass a string that isn't a number, you'll get NaN
 */
 function dynN (s) {
-  return typeof s === 'string' ? +s : s;
+  return typeof s === 'string' ? +s : s
 }
 
 // This feels really dumb, because we can compile these on the fly.
@@ -260,8 +255,8 @@ const ttl_regex = {
   h: /(\d+)h/,
   d: /(\d+)d/,
   M: /(\d+)M/,
-  y: /(\d+)y/
-};
+  y: /(\d+)y/,
+}
 
 /* ttlify
  *
@@ -279,14 +274,14 @@ const ttl_regex = {
  *   negative numbers are conveniently abs()ed thanks to our regex matches
 */
 function ttlify (s) {
-  if (typeof s.match !== 'function') return 0; // nope nope nope nope nope
-  let seconds = 1;
+  if (typeof s.match !== 'function') return 0 // nope nope nope nope nope
+  let seconds = 1
   let add_time = (unit, previous_in_unit) => {
-    seconds *= previous_in_unit;
-    let num = s.match(ttl_regex[unit]);
-    return num ? num[1] * seconds : 0;
-  };
+    seconds *= previous_in_unit
+    let num = s.match(ttl_regex[unit])
+    return num ? num[1] * seconds : 0
+  }
   let sum = add_time('s', 1) + add_time('m', 60) + add_time('h', 60)
-          + add_time('d', 24) + add_time('M', 31) + add_time('y', 12);
-  return sum ? sum + Math.floor(Date.now() / 1000) : 0;
+          + add_time('d', 24) + add_time('M', 31) + add_time('y', 12)
+  return sum ? sum + Math.floor(Date.now() / 1000) : 0
 }
